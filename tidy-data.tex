@@ -106,46 +106,61 @@ Messy data, including types of messiness not explicitly described above, can be 
 
 A common case of messy data is tabular data designed for presentation, where variables form both the rows and columns, and column headers are values, not variable names. While I call this type of data messy, in some cases it can be extremely useful. It provides efficient storage for completely crossed designs, and it can provide extremely efficient computation if desired operations can be expressed as matrix operations. It is also necessary for many multivariate methods whose underlying theory is based on manipulation of matrices. But it doesn't generalise well, requiring extensions into higher dimensions to deal with more variables, and can be very inefficient if there are a lot of missing values or variables are nested, not crossed. This makes it inappropriate as a general storage format.
 
-\begin{verbatim}
-Pew religion-income data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/pew-raw.tex}
+  \caption{Pew survey data on income and religion.}
+  \label{tbl:pew-raw}
+\end{table}
 
 Another common use of this format is recording regularly spaced observations over time. For example, the billboard dataset records the date a song first entered the billboard top 100. To record its ranking in the following weeks, 75 variables, from week1 to week75, are needed. This form of storage is useful for data entry because it reduces duplication - otherwise each song in each week would need its own row (a reflection of another messy problem: multiple types of experiment unit stored in the same table).
 
-\begin{verbatim}
-Billboard data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/billboard-raw.tex}
+  \caption{Billboard top hits for 2000.}
+  \label{tbl:billboard-raw}
+\end{table}
 
 This type of data is so common that in R a number of graphical tools have been designed specifically to visualise it, e.g. {\tt barplot}, {\tt matplot}, {\tt dotchart}, {\tt mosaicplot}. Other tools are designed to provide common manipulations like {\tt sweep}, {\tt prop.table} and {\tt margin.table}. Other tools produce this data format from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}.
 
 To tidy up this type of data we need to melt, or stack it, turning columns into rows. Melting is parameterised by a list of variables to keep in columns (cvars), or equivalently a list of columns that should be turned into rows (rvars). It works by adding a new indicator variable to the dataset and stacking the repeated cvars.
 
-\begin{verbatim}
-tidyed pew data
-tidyed billboard data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/pew-clean.tex}
+  \caption{Pew survey data on income and religion.}
+  \label{tbl:pew-clean}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \input{data/billboard-clean.tex}
+  \caption{Tidied billboard data.}
+  \label{tbl:billboard-clean}
+\end{table}
+
 
 \subsection{Multiple variables stored in one column}
 
-After melting, it often happens that the indicator variable actually records information about more than one variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  
+After melting, it often happens that the indicator variable actually records information about more than one variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  Table~\ref{tbl:tb-raw} illustrates the raw data, and Table~\ref{tbl:tb-clean-1} shows the result of melting the data to combine variables spread across columns.
 
-\begin{verbatim}
-Original tb
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/tb-raw.tex}
+  \caption{Original tb data}
+  \label{tbl:tb-raw}
+\end{table}
 
-After melting the data to combine variables spread across columns, we get:
+Typically, column headers in this format are separated by some character (e.g. {\tt .}, {\tt -}, {\tt \_}, {\tt :}) and we can simply split the string up based on that character.  In other cases, such as for this data, more careful string processing is required, or the variable names need to be matched to a hand made table that converts compound values to multiple variables. For the tb data, this yields Table~\ref{tbl:tb-clean}.
 
-\begin{verbatim}
-Molten tb
-\end{verbatim}
-
-Typically, column headers in this format are separated by some character (e.g. {\tt .}, {\tt -}, {\tt \_}, {\tt :}) and we can simply split the string up based on that character.  In other cases, such as for this data, more careful string processing is required, or the variable names need to be matched to a hand made table that converts compound values to multiple variables.
-
-Doing this for the tb data yields:
-
-\begin{verbatim}
-tidy tb
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/tb-clean-1.tex}
+  \input{data/tb-clean-2.tex}
+  \caption{(Left) Molten tb data. (Right) Cleaned data with variable variable broken up in to sex and age variables.}
+  \label{tbl:tb-clean}
+\end{table}
 
 Storing the data in this form resolves another problem in the original data: it's more informative to compare rates, rather than counts, between countries, but to compute rates we need to know the population of each category. In the original data format, there is no easy way to record this information, and it had to be stored in a separate file and was difficult to correctly match to the counts. In tidy form, adding variables to record total population and disease rate is easier: they just become additional columns.
 

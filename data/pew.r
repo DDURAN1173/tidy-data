@@ -1,14 +1,21 @@
 library(foreign)
 library(stringr)
 library(plyr)
+library(reshape2)
+source("xtable.r")
 
 # Data from http://pewforum.org/Datasets/Dataset-Download.aspx
-pew <- read.spss("religious-landscape.sav")
+
+# Load data -----------------------------------------------------------------
+
+pew <- read.spss("pew.sav")
 pew <- as.data.frame(pew)
 
 
 religion <- pew[c("q16", "reltrad", "income")]
 religion$reltrad <- as.character(religion$reltrad)
+religion$reltrad <- str_replace(religion$reltrad, " Churches", "")
+religion$reltrad <- str_replace(religion$reltrad, " Protestant", " Prot")
 religion$reltrad[religion$q16 == " Atheist (do not believe in God) "] <- "Atheist"
 religion$reltrad[religion$q16 == " Agnostic (not sure if there is a God) "] <- "Agnostic"
 religion$reltrad <- str_trim(religion$reltrad)
@@ -31,4 +38,9 @@ religion$income <- factor(religion$income, levels = c("<$10k", "$10-20k", "$20-3
 counts <- count(religion, c("reltrad", "income"))
 names(counts)[1] <- "religion"
 
-write.csv(counts, "religion-income.csv", row.names = F)
+xtable(counts[1:10, ], file = "pew-clean.tex")
+
+# Convert into the form in which I originally saw it -------------------------
+
+raw <- dcast(counts, religion ~ income)
+xtable(raw[1:10, 1:8], file = "pew-raw.tex")
