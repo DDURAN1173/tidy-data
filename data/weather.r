@@ -1,16 +1,15 @@
 library(stringr)
 library(reshape2)
 library(plyr)
+source("xtable.r")
 source("read-fwf.r")
 options(stringsAsFactors = FALSE)
 
 # Define format for fixed width file
-
 cols <- data.frame(
   name =  c("id", "year", "month", "element"),
   start = c(1,     12,    16,      18),
   end =   c(11,    15,    17,      21))
-
 
 names <- str_c(c("value", "mflag", "qflag", "sflag"), rep(1:31, each = 4), sep = "_")
 starts <- cumsum(c(22, rep(c(5, 1, 1, 1), 31)))
@@ -20,34 +19,28 @@ ends <- c(starts[-1], starts[length(starts)] + 1) - 1
 values <- data.frame(name = names, start = starts, end = ends)
 cols <- rbind(cols, values)
 
+# Load data and subset to small example
+raw <- read.fwf2("weather.txt",  cols)
+raw <- subset(raw, year == 2010 & element %in% c("TMIN", "TMAX")) 
+raw <- raw[, c(1:4, which(str_detect(names(raw), "value")))]
 
-# Find maximum year for each station
-mx <- read.csv("weather-stations-mx.csv")
-base_url <- "http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/all/"
-mx$url <- str_c(base_url, mx$id, ".dly")
+names(raw)[-(1:4)] <- str_c("d", 1:31)
+raw[raw == -9999] <- NA
+rownames(raw) <- NULL
 
-mx$year <- unlist(llply(1:nrow(mx), function(i) max(read.fwf2(mx$url[i], subset(cols, name == "year"))$year), .progress = "text"))
+xtable(raw[1:10, 1:14], file = "weather-raw.tex")
 
-write.csv(mx, "weather-stations-mx.csv", row.names = FALSE)
-# Only 16 stations with data up to 2010
+# Melt and tidy
 
-# Collect all data
+clean1 <- melt(raw, id = 1:4, na.rm = T)
+clean1$day <- as.integer(str_replace(clean1$variable, "d", ""))
+clean1$variable <- NULL
 
-raw <- ldply(mx$url[mx$year == 2010], read.fwf2,  cols)
-raw <- subset(raw, year >= 2005) 
-weatherm <- melt(raw, id = 1:4)
-weatherm$day <- as.numeric(str_replace_all(weatherm$variable, "[^0-9]",""))
-weatherm$variable <- str_replace_all(weatherm$variable, "[^a-z]","")
+clean1 <- clean1[c("id", "year", "month", "day", "element", "value")]
+clean1 <- arrange(clean1, year, month, day, element)
+xtable(clean1[1:10, ], file = "weather-clean-1.tex")
 
-weatherm <- subset(weatherm, variable == "value" && value != -9999)
-weatherm$variable <- NULL
-weatherm$element <- tolower(weatherm$element)
-weatherm$value <- as.numeric(weatherm$value)
+# Cast
 
-weather <- dcast(weatherm, ... ~ element)
-weather$snwd <- NULL # remove snow because so rare
-weather$tmin <- weather$tmin / 10 # convert to C
-weather$tmax <- weather$tmax / 10 # convert to C
-weather$prcp <- weather$prcp / 100 # convert to cm
-
-write.csv(weather, "weather-mx.csv", row.names = FALSE)
+clean2 <- dcast(clean1, ... ~ element)
+xtable(clean2[1:10, ], file = "weather-clean-2.tex")

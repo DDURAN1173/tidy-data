@@ -6,7 +6,7 @@
 \usepackage[format=plain,font=small]{caption}
 \usepackage[small]{titlesec}
 \usepackage[round,sectionbib]{natbib}
-\usepackage{pdfpages}
+\usepackage{booktabs}
 \bibliographystyle{plainnat}
 \renewcommand\rmdefault{bch}
 \linespread{1.07}
@@ -19,9 +19,9 @@
 
 \section{Introduction}
 
-Data cleaning is a vital first step in any analysis, and is often repeated multiple times as new problems come to light. Data cleaning encompasses many activities from outlier checking to missing value imputation. This paper focusses on a small subset of data cleaning that I call data tidying: getting the data in the right format for  manipulation, modelling, and visualisations. This paper defines tidy data, and shows how tidyness makes data easier to work. 
+Data cleaning is a vital first step in any analysis, and is often repeated multiple times as new problems come to light. Data cleaning encompasses many activities from outlier checking to missing value imputation. This paper focusses on a small subset of data cleaning that I call data tidying: getting the data in the right format for  manipulation, modelling, and visualisations. This paper defines tidy data, and shows how tidiness makes data easier to work. 
 
-The principles of tidy data are inspired by databases and Codd's relational algebra, but the set algebra that powers SQL and relational databases is not good a good fit for most statistical problems. It has been driven by my work in data analysis, where I have struggled with many datasets organised in bizarre ways. It grows out of my work on the plyr \citep{me:plyr} and reshape \citep{wickham:2007b} packages in R.
+The principles of tidy data are inspired by databases and Codd's relational algebra, but the set algebra that powers SQL and relational databases is not good a good fit for most statistical problems. It has been driven by my work in data analysis, where I have struggled with many datasets organised in bizarre ways. It grows out of my work on the plyr \citep{me:plyr} and reshape \citep{wickham:2007b} packages in R. These ideas have developed iteratively - as my understanding of tidy data improved, so to did these tools, which made me realise understand better what tools tidy data needs.
 
 My definition of tidy data is not exhaustive, and it focusses on the type of data that statisticians most commonly encounter: rectangular data defined by rows and columns. It is not a good fit for data on networks, \ldots, or \ldots Additional, because the focus of this definition is on explicit definition of the data, it may not be suitable for very large datasets - these may require special infrastructure for performance.
 
@@ -50,6 +50,8 @@ The paper is divided into three sections:
 \end{itemize}
 
 I will illustrate these ideas using R, because that is where I have developed the computational tools to support tidy data, but I believe the principles apply to any programming language which deals with data. In R, the majority built in modelling tools work best with tidy data. The plyr and ggplot2 \citep{me:ggplot2} packages work well with tidy data, and the reshape2 package provides tools useful for making dirty data tidy. The principles of tidy data will also help us criticise existing R functions, and I will show how untidy tools make more work for the analyst.
+
+Other tools: \citep{kandel:2011}
 
 \section{Defining tidy data}
 
@@ -87,7 +89,7 @@ The following sections describe how to make messy data tidy, and then justify th
 
 \section{Tidying messy data}
 
-Messy data can be messy in any number of ways - it just needs to violate the restriction of variables in columns and observations in rows. Real data violates these restrictions in almost every way imaginable. In this section, I will focus on some of the most common problems, illustrated with specific datasets that I have worked with:
+Messy data can be messy in any number of ways, by violating one of the three restrictions, and real data violates these restrictions in almost every way imaginable. In this section, I will focus on some of the most common problems, illustrated with specific datasets:
 
 \begin{itemize}
 
@@ -98,25 +100,23 @@ Messy data can be messy in any number of ways - it just needs to violate the res
 \item experimental unit stored in the multiple tables
 \end{itemize}
 
-Messy data, including types of messiness not explicitly described above, can be tidyed in a surprisingly small set of tools: melting, string splitting, and less often cast. The following sections discuss each type of problem in turn, introducing the tools needed to tidy it.
-
-The first step in any tidying is to identify the variables and observations.
+Messy data, including types of messiness not explicitly described above, can be tidied with a surprisingly small set of tools: melting, string splitting, and less often cast. The first step in any tidying is to identify the variables and observations. The following sections discuss each type of problem in turn, introducing the tools needed to tidy it.
 
 \subsection{Column headers are values, not variables names}
 
-A common case of messy data is tabular data designed for presentation, where variables form both the rows and columns, and column headers are values, not variable names. While I call this type of data dirty, in some cases it can be extremely useful. It provides efficient storage for completely crossed designs, and it can provide extremely efficient computation if desired operations can be expressed as matrix operations. It is also necessary for many multivariate methods whose underlying theory is based on manipulation of matrices. But it doesn't generalise well, requiring extensions into higher dimensions to deal with more variables, and can be very inefficient if there are a lot of missing values or variables are nested, not crossed. This makes it inappropriate as a general storage format.
+A common case of messy data is tabular data designed for presentation, where variables form both the rows and columns, and column headers are values, not variable names. While I call this type of data messy, in some cases it can be extremely useful. It provides efficient storage for completely crossed designs, and it can provide extremely efficient computation if desired operations can be expressed as matrix operations. It is also necessary for many multivariate methods whose underlying theory is based on manipulation of matrices. But it doesn't generalise well, requiring extensions into higher dimensions to deal with more variables, and can be very inefficient if there are a lot of missing values or variables are nested, not crossed. This makes it inappropriate as a general storage format.
 
 \begin{verbatim}
 Pew religion-income data
 \end{verbatim}
 
-Another common use of this data is for recording regularly spaced observations over time. For example, the billboard dataset records the date a song first entered the billboard top 100. To record its ranking in the following weeks, 75 variables, from week1 to week75, are needed.  This form of storage is useful for data entry because it reduces duplication - otherwise each song in each week would need its own row.
+Another common use of this format is recording regularly spaced observations over time. For example, the billboard dataset records the date a song first entered the billboard top 100. To record its ranking in the following weeks, 75 variables, from week1 to week75, are needed. This form of storage is useful for data entry because it reduces duplication - otherwise each song in each week would need its own row (a reflection of another messy problem: multiple types of experiment unit stored in the same table).
 
 \begin{verbatim}
 Billboard data
 \end{verbatim}
 
-This type of data is so common that in R a number of graphical tools have been designed specifically to visualise it, e.g. \texttt{barplot}, \texttt{matplot}, \texttt{dotchart}, \texttt{mosaicplot}. Other tools are designed to provide common manipulations like \texttt{sweep}, \texttt{prop.table} and \texttt{margin.table}. Other tools can produce this type of output from formerly tidy data: \texttt{table}, \texttt{xtabs}, \texttt{tapply}. The final section of the paper will alternative tools that work with tidy data, and provide more flexibility for an analysis.
+This type of data is so common that in R a number of graphical tools have been designed specifically to visualise it, e.g. {\tt barplot}, {\tt matplot}, {\tt dotchart}, {\tt mosaicplot}. Other tools are designed to provide common manipulations like {\tt sweep}, {\tt prop.table} and {\tt margin.table}. Other tools produce this data format from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}.
 
 To tidy up this type of data we need to melt, or stack it, turning columns into rows. Melting is parameterised by a list of variables to keep in columns (cvars), or equivalently a list of columns that should be turned into rows (rvars). It works by adding a new indicator variable to the dataset and stacking the repeated cvars.
 
@@ -127,19 +127,19 @@ tidyed billboard data
 
 \subsection{Multiple variables stored in one column}
 
-After melting, it often happens that the indicator variable actually records information about more than on variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  
+After melting, it often happens that the indicator variable actually records information about more than one variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  
 
 \begin{verbatim}
 Original tb
 \end{verbatim}
 
-After melting the data to combine variables spread across columns, we get
+After melting the data to combine variables spread across columns, we get:
 
 \begin{verbatim}
 Molten tb
 \end{verbatim}
 
-Typically, column headers in this format are separated by some character (e.g. \texttt{.}, \texttt{-}, \texttt{\_}, \texttt{:}) and we can simply split the string up based on that character.  In other cases, such as for this tb data, more careful string processing is required, or the variable names can be matched to a hand made table that converts compound values to multiple variables.
+Typically, column headers in this format are separated by some character (e.g. {\tt .}, {\tt -}, {\tt \_}, {\tt :}) and we can simply split the string up based on that character.  In other cases, such as for this data, more careful string processing is required, or the variable names need to be matched to a hand made table that converts compound values to multiple variables.
 
 Doing this for the tb data yields:
 
@@ -147,36 +147,46 @@ Doing this for the tb data yields:
 tidy tb
 \end{verbatim}
 
-Storing the data in this form resolves another problem in the original data: it's more informative to compare tb rates across countries, rather than counts, but to compute this we need to know the population of each category. In the original data format, there is no easy way to add this information, it had to be stored in separate file and was difficult to correctly match up to the counts. In tidy form, adding populations (and rates) are easier: they just become additional columns.
+Storing the data in this form resolves another problem in the original data: it's more informative to compare rates, rather than counts, between countries, but to compute rates we need to know the population of each category. In the original data format, there is no easy way to record this information, and it had to be stored in a separate file and was difficult to correctly match to the counts. In tidy form, adding variables to record total population and disease rate is easier: they just become additional columns.
 
 \subsection{Variables are stored in both rows and columns}
 
-The most complicated form of dirty data is when variables have been stored in both rows and columns. The weather data below has variables in single columns (id, year, month), spread across columns (day) and in rows (TMIN, TMAX).  
+The most complicated form of dirty data is when variables have been stored in both rows and columns. The weather data below has variables in single columns (id, year, month), spread across columns (day) and in rows (TMIN, TMAX, minimum and maximum temperature).  Note that the element column is not a variable: it stores the names of variables.
 
-\begin{verbatim}
-Original weather data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/weather-raw.tex}
+  \caption{Original weather data}
+  \label{tbl:weather-raw}
+\end{table}
 
-Melting the data gets us to:
+Melting the data gets us to Figure~\ref{tbl:weather-clean-1}.  A useful property of this form of data is that we can drop many of the missing values - they now become implicit rather than explicit. This data is mostly tidy, but we have two variables stored in rows: TMIN and TMAX, the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the {\tt element} variable back out into the columns to give Table~\ref{tbl:weather-clean-2}.
 
-\begin{verbatim}
-Molten weather data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/weather-clean-1.tex}
+  \caption{Weather data after being melted.}
+  \label{tbl:weather-clean-1}
+\end{table}
 
-Which is mostly tidy, but we have one variable stored in rows: the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the \texttt{obs} variable back out into the columns to get:
-
-\begin{verbatim}
-tidy weather data
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \input{data/weather-clean-2.tex}
+  \caption{Tidy weather data.}
+  \label{tbl:weather-clean-2}
+\end{table}
 
 \section{Working with tidy data}
 
-tidy data is only worthwhile in so much as it makes the rest of the analysis easier. This section discusses general tools for working with tidy data, organised into three components of data analysis: transformation, modelling and visualisation.
+Tidy data is only worthwhile if it makes analysis easier. This section discusses general tools for working with tidy data, organised into three important components of data analysis: modelling, manipulation and visualisation. These ideas work particularly well together in R, because I have designed the packages to support them, but I will try and focus on the general ideas. 
+
+In the absence of tidy data, tools must get much more complicated because they need include some parts of the tidying process. This can be useful for common types of messy data, but typically requires much additional complexity in the function, in both interface and implementation. I also think it's a bad idea because data is so important: you really want to be able to see the results of internal manipulations so that you can verify that they are correct.
 
 \subsection{Modelling}
 
+Modelling is the inspiration that has driven most of this work, because most modelling tools work best with tidy data, specifying the relationship between different variables. 
 
-Modelling is the inspiration that has driven most of this work. Every statistical language has a way of describing a model as a connection between different variables:
+Every statistical language has a way of describing a model as a connection between different variables:
 
 \begin{itemize}
 
@@ -185,11 +195,13 @@ Modelling is the inspiration that has driven most of this work. Every statistica
 \item SPSS:
 \end{itemize}
 
-Some have also tried to adapt these methods for other wide data. Repeated measures in SAS.
+Some have also tried to adapt these methods for specific types of messy data. For example in {\sc proc glm} in {\sc sas}, multiple variables on the response side of the equation will be interpreted as repeated measured if the {\sc repeated} keyword is present \url{http://www.ats.ucla.edu/stat/sas/library/repeated_ut.htm}.
 
-\subsection{Transformation}
+Model outputs aren't always tidy. This makes it more difficult to do things like combining the results (predictions, coefficients and standard errors) from thousands of models. Typically when doing this you need to produce the tidy forms yourself.
 
-Here I define transformation very generally - any operation that takes the data as input and returns modified data. It includes variable-by-variable transformation (e.g. \texttt{log} or \texttt{sqrt}), as well as aggregation, filtering and reordering. In my experience there are four extremely common operations that are performed over and over again in the course of an analysis.  These are the four fundamental verbs of data manipulation:
+\subsection{Manipulation}
+
+Data manipulation includes variable-by-variable transformation (e.g. {\tt log} or {\tt sqrt}), as well as aggregation, filtering and reordering. In my experience there are four extremely common operations that are performed over and over again in the course of an analysis. These are the four fundamental verbs of data manipulation:
 
 \begin{itemize}
 
@@ -197,51 +209,50 @@ Here I define transformation very generally - any operation that takes the data 
 \item aggregation, where multiple values are collapsed into a single value
 \item reordering, where the order of observations is changed
 \item mutation, where new variables are added or existing variables modified 
+
 \end{itemize}
 
-Each operation takes a data frame and some parameters as input and returns a data frame as output - this makes them easily composable to solve more difficult problems.  
+\subsubsection{Tidy tools}
 
-These four verbs are often modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, \ldots
+Each operation should be tidy: it should take a tidy input and return a tidy output. Tidy tools are important because they are composable.
 
-Some aggregations occur so frequently they deserve their own optimised implementations. An example of one such operation is (weighted) counting, which occurs so often that optimisation is worthwhile. Any such operator
+These four verbs are often modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, \ldots.  
 
-\subsection{Tidy tools}
+Some aggregations occur so frequently they deserve their own optimised implementations. An example of one such operation is (weighted) counting. Base R provides the {\tt table} function for this, but it is not tidy: it returns a vector/matrix/array with names. An alternative is the {\tt count} function from plyr.
 
-These need to return data in long form, so that they can easily be combined with the unaggregated data with join. The table function in base R does not do this - it returns a vector/matrix/array with names. This is problematic because it forces crossing of variables, so all combinations must be counted (many 0 zeros for combinations that don't exist in data), and it's difficult to combine back with the original data.
+Other tools can produce this type of output from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}. The final section of the paper will alternative tools that work with tidy data, and provide more flexibility for an analysis.
 
-\textbf{Multiple datasets}
+\subsubsection{Multiple datasets}
 
-This raises another important issue - when doing data analysis we don't usually work with a single set of data, but need to be able to fluidly combine multiple data sets, whether they are related data or the same data at multiple levels of aggregation. We need two additional operators for dealing with multiple datasets:
+Another set of tools is important for dealing with multiple datasets: 
 
 \begin{itemize}
 
-\item \texttt{join}: An advantage of long form data is the ease with which it can be combined: we just need a join operator which works by matching common variables and adding new columns. Compare this to the difficulty of combining wide datasets stored in arrays - these typically require painstaking alignment before matrix operations can be used, and errors are very hard to detect. 
+\item {\tt join}: An advantage of long form data is the ease with which it can be combined: we just need a join operator which works by matching common variables and adding new columns. Compare this to the difficulty of combining wide datasets stored in arrays - these typically require painstaking alignment before matrix operations can be used, and errors are very hard to detect. 
 
-\item \texttt{match\_df}: Another common operation is subsetting individual level data based on some summary level statistic. This is accomplished using a function very similar to join that only returns matching rows instead of trying to combine the columns.
+\item {\tt match\_df}: Another common operation is subsetting individual level data based on some summary level statistic. This is accomplished using a function very similar to join that only returns matching rows instead of trying to combine the columns.
 
 \end{itemize}
 
-These ideas have developed iteratively - as my understanding of tidy data improved, so to did these tools, which made me realise understand better what tools tidy data needs.
+\subsection{Visualisation}
 
-\textbf{Case study}
+Tidy data works well with visualisation because it connects closely to the grammar of graphics \citep{wilkinson:2006}. With tidy data, visualisations are straightforward to describe as a mapping between variables and aesthetic properties like position, size, shape and colour. This is the idea behind the layered grammar of graphics \citep{wickham:2007d}, as implemented in the ggplot2 package in R.
 
-The following examples illustrates these ideas.  
+Something about the group aesthetic - how this makes certain types of graphics much easier.
 
-In this snippet of code, we first count the number of deaths in each hour of the day (\texttt{hod}) for each cause of death (\texttt{cod}), then remove missing hours, join on fuller descriptions of the disease codes, and transform to compute proportions within a disease.
+\section{Case study} 
+
+The complete data and cleaning code is available at \url{https://github.com/hadley/mexico-mortality}.  It illustrates some of the many challenges apart from tidying that data cleaning requires: getting variables into the right formats, removing clearly impossible values, finding better sources of data. 
+
+The following case study will show R code that illustrates how the principles of tidy data make it easy to work with, combining manipulation, visualisation and modelling.
+
+In this snippet of code, we first count the number of deaths in each hour of the day ({\tt hod}) for each cause of death ({\tt cod}), then remove missing hours, join on fuller descriptions of the disease codes, and transform to compute hourly proportions within a disease.
 
 \begin{verbatim}
 hod2 <- count(deaths, c("hod", "cod"))
 hod2 <- subset(hod2, !is.na(hod))
 hod2 <- join(hod2, codes)
 hod2 <- ddply(hod2, "cod", transform, prop = freq / sum(freq))
-
-# Idea for new syntax
-
-deaths &
-  count(c("hod", "cod")) &
-  subset(!is.na(hod)) &
-  join(codes) &
-  by("cod", transform, prop = freq / sum(freq))
 \end{verbatim}
 
 In the following code, for each disease we calculate the deviation from a uniform pattern over time, find unusual diseases, and then go back to extract matching records from the original data.
@@ -253,16 +264,7 @@ devi <- ddply(hod2, "cod", summarise, n = sum(freq),
   dist = uni_dist(prop))
 unusual <- subset(devi, n > 1200 & dist >= 0.009)
 hod_unusual <- match_df(hod2, unusual)
-
-devi <- by("cod", summarise, n = sum(freq), dist = uni_dist(prop))
-deaths & match(devi & subset(n > 1200 & dist >= 0.009))
 \end{verbatim}
-
-\subsection{Visualisation}
-
-Lattice graphics tries to stick too closely to the modelling structure.
-
-ggplot2: map variables to different 
 
 \section{Conclusion}
 
