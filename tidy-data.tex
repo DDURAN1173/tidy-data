@@ -7,6 +7,7 @@
 \usepackage[small]{titlesec}
 \usepackage[round,sectionbib]{natbib}
 \usepackage{booktabs}
+\usepackage[utf8]{inputenc}
 \bibliographystyle{plainnat}
 \renewcommand\rmdefault{bch}
 \linespread{1.07}
@@ -20,6 +21,13 @@
 \section{Introduction}
 
 Data cleaning is a vital first step in any analysis, and is often repeated multiple times as new problems come to light. Data cleaning encompasses many activities from outlier checking to missing value imputation. This paper focusses on a small subset of data cleaning that I call data tidying: getting the data in the right format for  manipulation, modelling, and visualisations. This paper defines tidy data, and shows how tidiness makes data easier to work. 
+
+% Other cleaning tasks
+%
+%  * Parsing dates
+%  * Renaming variables
+%  * Correcting encoding
+%  * Abbreviating text
 
 The principles of tidy data are inspired by databases and Codd's relational algebra, but the set algebra that powers SQL and relational databases is not good a good fit for most statistical problems. It has been driven by my work in data analysis, where I have struggled with many datasets organised in bizarre ways. It grows out of my work on the plyr \citep{me:plyr} and reshape \citep{wickham:2007b} packages in R. These ideas have developed iteratively - as my understanding of tidy data improved, so to did these tools, which made me realise understand better what tools tidy data needs.
 
@@ -175,7 +183,7 @@ The most complicated form of dirty data is when variables have been stored in bo
   \label{tbl:weather-raw}
 \end{table}
 
-Melting the data gets us to Figure~\ref{tbl:weather-clean-1}.  A useful property of this form of data is that we can drop many of the missing values - they now become implicit rather than explicit. This data is mostly tidy, but we have two variables stored in rows: TMIN and TMAX, the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the {\tt element} variable back out into the columns to give Table~\ref{tbl:weather-clean-2}.
+Melting the data gets us to Table~\ref{tbl:weather-clean-1}.  A useful property of this form of data is that we can drop many of the missing values - they now become implicit rather than explicit. This data is mostly tidy, but we have two variables stored in rows: TMIN and TMAX, the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the {\tt element} variable back out into the columns to give Table~\ref{tbl:weather-clean-2}.
 
 \begin{table}[htbp]
   \centering
@@ -189,6 +197,23 @@ Melting the data gets us to Figure~\ref{tbl:weather-clean-1}.  A useful property
   \input{data/weather-clean-2.tex}
   \caption{Tidy weather data.}
   \label{tbl:weather-clean-2}
+\end{table}
+
+\subsection{Multiple types in one table}
+
+Datasets often involve data collected at multiple levels, on different types of experimental unit. During tidying, each type of experimental unit should be stored in its own table. This makes it easier to spot inconsistencies in the data.  
+
+For example, the billboard data describe above actually contains data on two experimental units: the song, and the song-week. These should be broken down into two datasets, a song dataset which stores artist, song name, and a ranking dataset which matches the song and week to the ranking.  You could also imagine a week dataset which would record background information about the week, maybe the total number of song sales or similar ``demographic information''.
+
+This is closely related to the idea of data normalisation, where each fact is only stored in one location. In Table~\ref{tbl:billboard-clean} you can see facts repeated multiple times: the artist for each track is stored in multiple places. In this case we created the duplication programmatically, so we know that it is consistent, but if the data comes to us in this form we may find inconsistencies. Table~\ref{tbl:billboard-normal} shows the result of normalising the data.
+
+\begin{table}
+  \centering
+  \input{data/billboard-song.tex}
+  \input{data/billboard-rank.tex}
+
+  \caption{Normalised billboard data split up into song and rank datasets.}
+  \label{tbl:billboard-normal}
 \end{table}
 
 \section{Working with tidy data}
