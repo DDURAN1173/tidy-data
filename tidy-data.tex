@@ -27,7 +27,9 @@ Data cleaning is a vital first step in any analysis, and is often repeated multi
 %  * Parsing dates
 %  * Renaming variables
 %  * Correcting encoding
-%  * Abbreviating text
+%  * Abbreviating long-text strings
+%  * Identify how missing values are stored
+%  * Strip formatting off numbers and convert to numeric
 
 The principles of tidy data are inspired by databases and Codd's relational algebra, but the set algebra that powers SQL and relational databases is not good a good fit for most statistical problems. It has been driven by my work in data analysis, where I have struggled with many datasets organised in bizarre ways. It grows out of my work on the plyr \citep{me:plyr} and reshape \citep{wickham:2007b} packages in R. These ideas have developed iteratively - as my understanding of tidy data improved, so to did these tools, which made me realise understand better what tools tidy data needs.
 
@@ -58,6 +60,8 @@ The paper is divided into three sections:
 \end{itemize}
 
 I will illustrate these ideas using R, because that is where I have developed the computational tools to support tidy data, but I believe the principles apply to any programming language which deals with data. In R, the majority built in modelling tools work best with tidy data. The plyr and ggplot2 \citep{me:ggplot2} packages work well with tidy data, and the reshape2 package provides tools useful for making dirty data tidy. The principles of tidy data will also help us criticise existing R functions, and I will show how untidy tools make more work for the analyst.
+
+All code used for cleaning the datasets in this paper is available in the supplemental materials, and in the paper repository, \url{https://github.com/hadley/tidy-data}.  I'll also provide pointers to other large data tidying and cleaning code sources where appropriate.
 
 Other tools: \citep{kandel:2011}
 
@@ -216,11 +220,21 @@ This is closely related to the idea of data normalisation, where each fact is on
   \label{tbl:billboard-normal}
 \end{table}
 
+While normalisation is useful for tidying and making sure that there are no inconsistent facts, for analysis it's usually more convenient to denormalise, and collapse back into one giant table: there are few data analysis tools designed to work directly with relational data.
+
+\subsection{One type in multiple tables}
+
+Contrariwise, it's also common to find data about a single type of experimental unit spread out over multiple tables, or multiple files. These tables are often split up by some other variable, so each file represents a single year, or person, or some other condition. This is the easiest problem to fix: read in all files, add a new column to each which stores the original file name (because often a variable is stored in the filename), then combine all tables into a single table. This is two or three lines of R code. Additional tidying as outlined in the previous steps maybe be needed.  An example of this type of cleaning can be found at \url{https://github.com/hadley/data-baby-names} which takes the yearly baby names data provided by the US Social Security Administration and combines them into a single file to support analysis.
+
+A more complicated situation is when the data storage format has changed over time: variable names have changed, different variables have been collected, storage format as changed (e.g.\ csv to tab delimited), different conventions for missing values. This may require each file to tidied individually (or hopefully in small groups) and then combined together. 
+
+An example of this type of problem (and solution) can be found at \url{https://github.com/hadley/data-fuel-economy}. That code produces a tidied version of the {\sc epa} fuel economy data. Data from 1978 on is available online, between 1978 and 2008 there have been four major file formats used, with many minor variations.
+
 \section{Working with tidy data}
 
-Tidy data is only worthwhile if it makes analysis easier. This section discusses general tools for working with tidy data, organised into three important components of data analysis: modelling, manipulation and visualisation. These ideas work particularly well together in R, because I have designed the packages to support them, but I will try and focus on the general ideas. 
+Tidy data is only worthwhile if it makes analysis easier. This section discusses general tools for working with tidy data, organised into three important components of data analysis: modelling, manipulation and visualisation. These ideas work particularly well together in R, because I have designed the packages to support them, but I will try and focus on the general ideas.
 
-In the absence of tidy data, tools must get much more complicated because they need include some parts of the tidying process. This can be useful for common types of messy data, but typically requires much additional complexity in the function, in both interface and implementation. I also think it's a bad idea because data is so important: you really want to be able to see the results of internal manipulations so that you can verify that they are correct.
+In the absence of tidy data, tools must get much more complicated because they need include some parts of the tidying process. This can be useful for common types of messy data, but typically requires much additional complexity in the function, in both interface and implementation. I also think it's a bad idea because data is so important: you really want to be able to see the results of internal manipulations so that you can verify that they are correct. 
 
 \subsection{Modelling}
 

@@ -35,7 +35,7 @@ xtable(clean_out[1:15, ], "billboard-clean.tex")
 
 song <- unrowname(unique(clean[c("artist", "track", "genre", "time")]))
 song$id <- 1:nrow(song)
-xtable(song[1:15, ], "billboard-song.tex")
+xtable(song[1:15, c(5, 1, 2, 4)], "billboard-song.tex")
 
 rank <- join(clean, song, match = "first")
 rank <- rank[c("id", "date", "rank")]
