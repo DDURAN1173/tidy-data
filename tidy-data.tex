@@ -7,7 +7,8 @@
 \usepackage[small]{titlesec}
 \usepackage[round,sectionbib]{natbib}
 \usepackage{booktabs}
-\usepackage[utf8]{inputenc}
+\usepackage[utf8x]{inputenc}
+
 \bibliographystyle{plainnat}
 \renewcommand\rmdefault{bch}
 \linespread{1.07}
@@ -61,9 +62,9 @@ The paper is divided into three sections:
 
 I will illustrate these ideas using R, because that is where I have developed the computational tools to support tidy data, but I believe the principles apply to any programming language which deals with data. In R, the majority built in modelling tools work best with tidy data. The plyr and ggplot2 \citep{me:ggplot2} packages work well with tidy data, and the reshape2 package provides tools useful for making dirty data tidy. The principles of tidy data will also help us criticise existing R functions, and I will show how untidy tools make more work for the analyst.
 
-All code used for cleaning the datasets in this paper is available in the supplemental materials, and in the paper repository, \url{https://github.com/hadley/tidy-data}.  I'll also provide pointers to other large data tidying and cleaning code sources where appropriate.
+All code used for cleaning the datasets in this paper is available in the supplemental materials and in the paper repository, \url{https://github.com/hadley/tidy-data}. I'll also provide pointers to other large data tidying and cleaning code sources where appropriate.
 
-Other tools: \citep{kandel:2011}
+Other tools: \citep{kandel:2011}, potter etc.
 
 \section{Defining tidy data}
 
@@ -73,27 +74,39 @@ Tidy datasets are all alike; every messy dataset is messy in its own way. Here w
 
 Statistical data usually comes in a rectangular \textbf{table}, made up of rows and columns. It is usually labelled with column names, and sometimes with row names. Such data is a collection of \textbf{value}s, each either a single number (if quantitative) or a single string (if qualitative). Values are grouped into \textbf{variables}, measurements of a single attribute. Multiple measurements made on the same \textbf{experimental unit} form an \textbf{observation}. 
 
-The following table illustrates a common data format. There are two columns and two rows (plus headers), defining three variables (sex, pregnancy status, count) and four observations.
+Table~\ref{tbl:preg-raw} illustrates a common data format. There are two columns and two rows (plus headers), defining three variables (sex, pregnancy status, count) and four observations.
 
-\begin{verbatim}
-         | Pregnant  Not-Pregnant
-  -------+-----------------------
-  Male   |        0             5
-  Female |        1             4
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{l|ll}
+  \toprule
+         & Pregnant & Not-Pregnant \\
+  \midrule
+  Male   &        0 &            5 \\
+  Female &        1 &            4 \\
+  \bottomrule
+  \end{tabular}
+  \caption{Typical data presentation.}
+  \label{tbl:preg-raw}
+\end{table}
 
-Data is messy or tidy depending on how these structures are arranged. In tidy data each variable lies in a column, and each observation lies in a row. This form is also sometimes called long-form data. We will call all other arrangements messy.  An additional restriction is that each table should store data about one type of experimental unit.
+Data is messy or tidy depending on how these structures are arranged. In tidy data each variable lies in a column, and each observation lies in a row. This form is also sometimes called long-form data. We will call all other arrangements messy. An additional restriction is that each table should store data about one type of experimental unit. Table~\ref{tbl:preg-tidy} shows the tidy representation of the previous data.
 
-The following table shows the tidy representation of the previous data:
-
-\begin{verbatim}
-  pregnant  sex    | n
-  -----------------+-
-  No        Female | 4
-  No        Male   | 5
-  Yes       Female | 1
-  Yes       Male   | 0
-\end{verbatim}
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{ll|l}
+    \toprule
+    pregnant &  sex    & n  \\
+    \midrule
+    No       &  Female & 4  \\
+    No       &  Male   & 5  \\
+    Yes      &  Female & 1  \\
+    Yes      &  Male   & 0  \\
+    \bottomrule
+  \end{tabular}
+  \caption{Tidied data.}
+  \label{tbl:preg-tidy}
+\end{table}
 
 While order of variables and observations does not affect analysis, a good ordering makes it easier to scan the raw data. Variables can be ordered by grouping them into identifier and measured variables. \textbf{Identifier variables} describe the experimental design and are known in advance (in a sense they're not really measurements). \textbf{Measured variables} are what we actually measure in the study. Identifier variables should come first first, ordered in terms of their natural hierarchy if present, otherwise alphabetically. Measured variables come next, ordered alphabetically. Rows can then be ordered so that the first id variable varies slowest, followed by the second, and so on.
 
@@ -104,15 +117,18 @@ The following sections describe how to make messy data tidy, and then justify th
 Messy data can be messy in any number of ways, by violating one of the three restrictions, and real data violates these restrictions in almost every way imaginable. In this section, I will focus on some of the most common problems, illustrated with specific datasets:
 
 \begin{itemize}
-
-\item column headers are values, not variable names (pew religion, billboard)
-\item multiple variables are stored in one column (tb)
-\item variables are stored in both rows and columns (weather)
-\item multiple types of experimental unit stored in the same table
-\item experimental unit stored in the multiple tables
+  \item column headers are values, not variable names
+  \item multiple variables are stored in one column
+  \item variables are stored in both rows and columns
+  \item multiple types of experimental unit stored in the same table
+  \item experimental unit stored in the multiple tables
 \end{itemize}
 
-Messy data, including types of messiness not explicitly described above, can be tidied with a surprisingly small set of tools: melting, string splitting, and less often cast. The first step in any tidying is to identify the variables and observations. The following sections discuss each type of problem in turn, introducing the tools needed to tidy it.
+The following sections discuss each type of problem in turn, introducing the tools needed to tidy it.
+
+Surprisingly, messy data, including types of messiness not explicitly described above, can be tidied with a surprisingly small set of tools: melting, string splitting, and casting. 
+
+The first step in any tidying is to identify the variables and observations. 
 
 \subsection{Column headers are values, not variables names}
 
@@ -155,7 +171,7 @@ To tidy up this type of data we need to melt, or stack it, turning columns into 
 
 \subsection{Multiple variables stored in one column}
 
-After melting, it often happens that the indicator variable actually records information about more than one variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  Table~\ref{tbl:tb-raw} illustrates the raw data, and Table~\ref{tbl:tb-clean-1} shows the result of melting the data to combine variables spread across columns.
+After melting, it often happens that the indicator variable actually records information about more than one variable. This is illustrated by the tb dataset - each column represents two values: age and sex.  Table~\ref{tbl:tb-raw} illustrates the raw data. 
 
 \begin{table}[htbp]
   \centering
@@ -164,7 +180,7 @@ After melting, it often happens that the indicator variable actually records inf
   \label{tbl:tb-raw}
 \end{table}
 
-Typically, column headers in this format are separated by some character (e.g. {\tt .}, {\tt -}, {\tt \_}, {\tt :}) and we can simply split the string up based on that character.  In other cases, such as for this data, more careful string processing is required, or the variable names need to be matched to a hand made table that converts compound values to multiple variables. For the tb data, this yields Table~\ref{tbl:tb-clean}.
+Typically, column headers in this format are separated by some character (e.g. {\tt .}, {\tt -}, {\tt \_}, {\tt :}) and we can simply split the string up based on that character. In other cases, such as for this data, more careful string processing is required, or the variable names need to be matched to a hand made table that converts compound values to multiple variables. For the tb data, this yields Table~\ref{tbl:tb-clean}.
 
 \begin{table}[htbp]
   \centering
@@ -174,11 +190,11 @@ Typically, column headers in this format are separated by some character (e.g. {
   \label{tbl:tb-clean}
 \end{table}
 
-Storing the data in this form resolves another problem in the original data: it's more informative to compare rates, rather than counts, between countries, but to compute rates we need to know the population of each category. In the original data format, there is no easy way to record this information, and it had to be stored in a separate file and was difficult to correctly match to the counts. In tidy form, adding variables to record total population and disease rate is easier: they just become additional columns.
+Storing the data in this form resolves another problem in the original data: it's more informative to compare rates, rather than counts, between countries, but to compute rates we need to know the population in each category. In the original data format, there is no easy way to record this information, and it has to be stored in a separate file. This makes it difficult to correctly match populations to disease counts. In tidy form, adding variables to record total population and disease rate is easier: they just become additional columns.
 
 \subsection{Variables are stored in both rows and columns}
 
-The most complicated form of dirty data is when variables have been stored in both rows and columns. The weather data below has variables in single columns (id, year, month), spread across columns (day) and in rows (TMIN, TMAX, minimum and maximum temperature).  Note that the element column is not a variable: it stores the names of variables.
+The most complicated form of dirty data is when variables have been stored in both rows and columns. The weather data in Table~\ref{tbl:weather-raw} has variables in single columns (id, year, month), spread across columns (day) and in rows (TMIN, TMAX) (minimum and maximum temperature). Note that the element column is not a variable: it stores the names of variables. Melting the data gets us to Table~\ref{tbl:weather-clean-1}. A useful property of this form of data is that we can drop many of the missing values - they now become implicit rather than explicit. This data is mostly tidy, but we have two variables stored in rows: TMIN and TMAX, the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the {\tt element} variable back out into the columns to give Table~\ref{tbl:weather-clean-2}. This form has one variable in each column, and each row represents a day's observations. The cast operation is described in more detail in \citet{wickham:2007b}.
 
 \begin{table}[htbp]
   \centering
@@ -186,8 +202,6 @@ The most complicated form of dirty data is when variables have been stored in bo
   \caption{Original weather data}
   \label{tbl:weather-raw}
 \end{table}
-
-Melting the data gets us to Table~\ref{tbl:weather-clean-1}.  A useful property of this form of data is that we can drop many of the missing values - they now become implicit rather than explicit. This data is mostly tidy, but we have two variables stored in rows: TMIN and TMAX, the observation type. Fixing this requires the cast, or unstack, operation, which performs the inverse of melting, and rotates the {\tt element} variable back out into the columns to give Table~\ref{tbl:weather-clean-2}.
 
 \begin{table}[htbp]
   \centering
@@ -205,11 +219,13 @@ Melting the data gets us to Table~\ref{tbl:weather-clean-1}.  A useful property 
 
 \subsection{Multiple types in one table}
 
-Datasets often involve data collected at multiple levels, on different types of experimental unit. During tidying, each type of experimental unit should be stored in its own table. This makes it easier to spot inconsistencies in the data.  
+Datasets often involve data collected at multiple levels, on different types of experimental unit. During tidying, each type of experimental unit should be stored in its own table. This makes it easier to spot inconsistencies in the data.
 
-For example, the billboard data describe above actually contains data on two experimental units: the song, and the song-week. These should be broken down into two datasets, a song dataset which stores artist, song name, and a ranking dataset which matches the song and week to the ranking.  You could also imagine a week dataset which would record background information about the week, maybe the total number of song sales or similar ``demographic information''.
+For example, the billboard data describe above actually contains data on two experimental units: the song, and the song-week. These should be broken down into two datasets, a song dataset which stores artist, song name, and a ranking dataset which matches the song and week to the ranking. You could also imagine a week dataset which would record background information about the week, maybe the total number of song sales or similar ``demographic'' information.
 
-This is closely related to the idea of data normalisation, where each fact is only stored in one location. In Table~\ref{tbl:billboard-clean} you can see facts repeated multiple times: the artist for each track is stored in multiple places. In this case we created the duplication programmatically, so we know that it is consistent, but if the data comes to us in this form we may find inconsistencies. Table~\ref{tbl:billboard-normal} shows the result of normalising the data.
+% More info about third normal form?
+
+This is closely related to the idea of database normalisation, where each fact is only stored in one location. In Table~\ref{tbl:billboard-clean} you can see facts repeated multiple times: the artist for each track is stored in multiple places. In this case we created the duplication programmatically, so we know that it is consistent, but if the data comes to us in this form we may find inconsistencies. Table~\ref{tbl:billboard-normal} shows the result of normalising the data.
 
 \begin{table}
   \centering
@@ -224,34 +240,33 @@ While normalisation is useful for tidying and making sure that there are no inco
 
 \subsection{One type in multiple tables}
 
-Contrariwise, it's also common to find data about a single type of experimental unit spread out over multiple tables, or multiple files. These tables are often split up by some other variable, so each file represents a single year, or person, or some other condition. This is the easiest problem to fix: read in all files, add a new column to each which stores the original file name (because often a variable is stored in the filename), then combine all tables into a single table. This is two or three lines of R code. Additional tidying as outlined in the previous steps maybe be needed.  An example of this type of cleaning can be found at \url{https://github.com/hadley/data-baby-names} which takes the yearly baby names data provided by the US Social Security Administration and combines them into a single file to support analysis.
+Similarly, it's also common to find data about a single type of experimental unit spread out over multiple tables, or multiple files. These tables are often split up by some other variable, so each file represents a single year, or person, or some other condition. This is typically an easy problem to fix: read in all files, add a new column that records the original file name (because often a variable is stored in the filename), then combine all tables into a single table. This is two or three lines of R code. Once you have a single table, you can perform additional tidying as needed. An example of this type of cleaning can be found at \url{https://github.com/hadley/data-baby-names} which takes 129 yearly baby names tables provided by the US Social Security Administration and combines them into a single file.
 
-A more complicated situation is when the data storage format has changed over time: variable names have changed, different variables have been collected, storage format as changed (e.g.\ csv to tab delimited), different conventions for missing values. This may require each file to tidied individually (or hopefully in small groups) and then combined together. 
-
-An example of this type of problem (and solution) can be found at \url{https://github.com/hadley/data-fuel-economy}. That code produces a tidied version of the {\sc epa} fuel economy data. Data from 1978 on is available online, between 1978 and 2008 there have been four major file formats used, with many minor variations.
+A more complicated situation is when the data storage format has changed over time: variable names have changed, different variables have been collected, storage format have changed (e.g.\ csv to tab delimited), or different conventions for missing values have been used. This may require each file to tidied individually (or hopefully in small groups) and then combined together. An example of this type of problem (and solution) can be found at \url{https://github.com/hadley/data-fuel-economy}. That code produces a tidied version of the {\sc epa} fuel economy data. Data from 1978 on is available online, between 1978 and 2008 there have been four major file formats used, with many minor variations.
 
 \section{Working with tidy data}
 
 Tidy data is only worthwhile if it makes analysis easier. This section discusses general tools for working with tidy data, organised into three important components of data analysis: modelling, manipulation and visualisation. These ideas work particularly well together in R, because I have designed the packages to support them, but I will try and focus on the general ideas.
 
-In the absence of tidy data, tools must get much more complicated because they need include some parts of the tidying process. This can be useful for common types of messy data, but typically requires much additional complexity in the function, in both interface and implementation. I also think it's a bad idea because data is so important: you really want to be able to see the results of internal manipulations so that you can verify that they are correct. 
+Tidy data is better than messy data because variables are stored in a consistent, and explicit manner, and so tools that work with tidy data have a standard way of referring to variables.  This is a recurring theme for useful analysis tools, whether for modelling, visualisation or data manipulation.
+
+In the absence of tidy data, tools must be much more complicated because they need include some parts of the tidying process. This can be useful for common types of messy data, but typically requires much additional complexity in the function, in both interface and implementation. I also think it's a bad idea because data is so important: you really want to be able to see the results of internal manipulations so that you can verify that they are correct. 
 
 \subsection{Modelling}
 
-Modelling is the inspiration that has driven most of this work, because most modelling tools work best with tidy data, specifying the relationship between different variables. 
-
-Every statistical language has a way of describing a model as a connection between different variables:
+Modelling is the inspiration that has driven most of this work, because most modelling tools work best with tidy data. Every statistical language has a way of describing a model as a connection between different variables:   
 
 \begin{itemize}
-
-\item R:
-\item SAS:
-\item SPSS:
+  \item R (lm): \verb|y ~ a + b + c * d|
+  \item SAS (PROC GLM): \verb|y = a + b + c * d|
+  \item SPSS (glm): \verb|y BY a b c d |
 \end{itemize}
 
-Some have also tried to adapt these methods for specific types of messy data. For example in {\sc proc glm} in {\sc sas}, multiple variables on the response side of the equation will be interpreted as repeated measured if the {\sc repeated} keyword is present \url{http://www.ats.ucla.edu/stat/sas/library/repeated_ut.htm}.
+This is not to say that tidy data is the format used internally to compute the regression. Typically significant transformations take place to produce a numeric matrix that can easily be fed to standard linear algebra routines.  Transformations include adding an intercept column (column of all ones), turning categorical variables in to multiple dummy variables, and for smooth terms like splines, projecting the data on to the appropriate basis functions.
 
-Model outputs aren't always tidy. This makes it more difficult to do things like combining the results (predictions, coefficients and standard errors) from thousands of models. Typically when doing this you need to produce the tidy forms yourself.
+There have been some attempts to adapt modelling functions for specific types of messy data. For example in {\sc proc glm} in {\sc sas}, multiple variables on the response side of the equation will be interpreted as repeated measured if the {\sc repeated} keyword is present.  For example, with raw billboard data, you could construct a model of the form \verb|week1-week76 = track| could be used instead of \verb|rank = week * track| on the clean data (provided week is recorded as a categorical variable). \url{http://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_glm_sect022.htm}.
+
+While model inputs usually require tidy inputs, models outputs, such as predictions and estimated coefficients, aren't always tidy. This makes it more difficult to combine results from multiple models. For example, in R, model coefficients do not have an explicit variable that records the variable name corresponding to an estimate: instead they are recorded as row names.  This is problematic because rownames must be unique, so it's harder to combine coefficients from (e.g.) bootstrap resamples of a model fit.
 
 \subsection{Manipulation}
 
@@ -270,7 +285,7 @@ Data manipulation includes variable-by-variable transformation (e.g. {\tt log} o
 
 Each operation should be tidy: it should take a tidy input and return a tidy output. Tidy tools are important because they are composable.
 
-These four verbs are often modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, \ldots.  
+These four verbs can be, and often are, modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, \ldots.
 
 Some aggregations occur so frequently they deserve their own optimised implementations. An example of one such operation is (weighted) counting. Base R provides the {\tt table} function for this, but it is not tidy: it returns a vector/matrix/array with names. An alternative is the {\tt count} function from plyr.
 
