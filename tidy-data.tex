@@ -137,7 +137,7 @@ A common case of messy data is tabular data designed for presentation, where var
 \begin{table}[htbp]
   \centering
   \input{data/pew-raw.tex}
-  \caption{Pew survey data on income and religion.}
+  \caption{Pew survey data on income and religion.} 
   \label{tbl:pew-raw}
 \end{table}
 
@@ -149,8 +149,6 @@ Another common use of this format is recording regularly spaced observations ove
   \caption{Billboard top hits for 2000.}
   \label{tbl:billboard-raw}
 \end{table}
-
-This type of data is so common that in R a number of graphical tools have been designed specifically to visualise it, e.g. {\tt barplot}, {\tt matplot}, {\tt dotchart}, {\tt mosaicplot}. Other tools are designed to provide common manipulations like {\tt sweep}, {\tt prop.table} and {\tt margin.table}. Other tools produce this data format from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}.
 
 To tidy up this type of data we need to melt, or stack it, turning columns into rows. Melting is parameterised by a list of variables to keep in columns (cvars), or equivalently a list of columns that should be turned into rows (rvars). It works by adding a new indicator variable to the dataset and stacking the repeated cvars.
 
@@ -266,11 +264,13 @@ This is not to say that tidy data is the format used internally to compute the r
 
 There have been some attempts to adapt modelling functions for specific types of messy data. For example in {\sc proc glm} in {\sc sas}, multiple variables on the response side of the equation will be interpreted as repeated measured if the {\sc repeated} keyword is present.  For example, with raw billboard data, you could construct a model of the form \verb|week1-week76 = track| could be used instead of \verb|rank = week * track| on the clean data (provided week is recorded as a categorical variable). \url{http://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_glm_sect022.htm}.
 
-While model inputs usually require tidy inputs, models outputs, such as predictions and estimated coefficients, aren't always tidy. This makes it more difficult to combine results from multiple models. For example, in R, model coefficients do not have an explicit variable that records the variable name corresponding to an estimate: instead they are recorded as row names.  This is problematic because rownames must be unique, so it's harder to combine coefficients from (e.g.) bootstrap resamples of a model fit.
+While model inputs usually require tidy inputs, model outputs, such as predictions and estimated coefficients, aren't always tidy. This makes it more difficult to combine results from multiple models. For example, in R, model coefficients do not have an explicit variable that records the variable name corresponding to an estimate: instead they are recorded as row names.  This is problematic because rownames must be unique, so it's harder to combine coefficients from (e.g.) bootstrap resamples of a model fit.
 
 \subsection{Manipulation}
 
-Data manipulation includes variable-by-variable transformation (e.g. {\tt log} or {\tt sqrt}), as well as aggregation, filtering and reordering. In my experience there are four extremely common operations that are performed over and over again in the course of an analysis. These are the four fundamental verbs of data manipulation:
+Data manipulation includes variable-by-variable transformation (e.g. {\tt log} or {\tt sqrt}), as well as aggregation, filtering and reordering.Each operation should be tidy: it should take a tidy input and return a tidy output - if so I call it a tidy tool. Tidy tools are important because they are composable: you can chain them together without having to worry about changing data formats.
+
+In my experience there are four extremely common operations that are performed over and over again in the course of an analysis. These are the four fundamental verbs of data manipulation:
 
 \begin{itemize}
 
@@ -281,19 +281,11 @@ Data manipulation includes variable-by-variable transformation (e.g. {\tt log} o
 
 \end{itemize}
 
-\subsubsection{Tidy tools}
+These four verbs can be, and often are, modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, ... Some aggregations occur so frequently they deserve their own optimised implementations. An example of one such operation is (weighted) counting. Base R provides the {\tt table} function for this, but it is not tidy: it returns a a messy multidimensional table. An tidy alternative is the {\tt count} function from plyr.
 
-Each operation should be tidy: it should take a tidy input and return a tidy output. Tidy tools are important because they are composable.
+These tools are most useful when they are tidy, and this distinction provides a useful tool for critiquing built in R data analysis tools. {\tt subset}, {\tt transform}, and {\tt aggregate} are tidy. {\tt by}, {\tt xtabs} and {\tt tapply} are not. Not being tidy doesn't mean a tool isn't useful, it just makes it hard to string together during data analysis - which slows down analysis, because you have remember how to tidy that particular format.
 
-These four verbs can be, and often are, modified by the \textbf{by} preposition. Many times we need group-wise aggregates, transformations or subsets: pick the biggest in each group, average over replicates, \ldots.
-
-Some aggregations occur so frequently they deserve their own optimised implementations. An example of one such operation is (weighted) counting. Base R provides the {\tt table} function for this, but it is not tidy: it returns a vector/matrix/array with names. An alternative is the {\tt count} function from plyr.
-
-Other tools can produce this type of output from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}. The final section of the paper will alternative tools that work with tidy data, and provide more flexibility for an analysis.
-
-\subsubsection{Multiple datasets}
-
-Another set of tools is important for dealing with multiple datasets: 
+Other tools are need for dealing with multiple datasets.  
 
 \begin{itemize}
 
@@ -303,36 +295,86 @@ Another set of tools is important for dealing with multiple datasets:
 
 \end{itemize}
 
+% Need a comparison of tidy data vs. multi-d array.
+% Things that are easy with arrays: sweep, apply, prop.table
+% Things that are hard with arrays: merge, lm
+
 \subsection{Visualisation}
 
 Tidy data works well with visualisation because it connects closely to the grammar of graphics \citep{wilkinson:2006}. With tidy data, visualisations are straightforward to describe as a mapping between variables and aesthetic properties like position, size, shape and colour. This is the idea behind the layered grammar of graphics \citep{wickham:2007d}, as implemented in the ggplot2 package in R.
 
 Something about the group aesthetic - how this makes certain types of graphics much easier.
 
+This type of data is so common that in R a number of graphical tools have been designed specifically to visualise it, e.g. {\tt barplot}, {\tt matplot}, {\tt dotchart}, {\tt mosaicplot}. Other tools are designed to provide common manipulations like {\tt sweep}, {\tt prop.table} and {\tt margin.table}. Other tools produce this data format from formerly tidy data: {\tt table}, {\tt xtabs}, {\tt tapply}.
+
 \section{Case study} 
 
-The complete data and cleaning code is available at \url{https://github.com/hadley/mexico-mortality}.  It illustrates some of the many challenges apart from tidying that data cleaning requires: getting variables into the right formats, removing clearly impossible values, finding better sources of data. 
+The following case study attempts to illustrate how tidy data makes a data analysis easier, combining manipulation, visualisation and modelling. The case study uses data on mortality in Mexico, with the goal of finding diseases that have notably different rates from the average over the course of the day. The original data and cleaning code can be found at \url{https://github.com/hadley/mexico-mortality}. It illustrates some of the many challenges apart from tidying that data cleaning requires: getting variables into the right formats, removing clearly impossible values, and finding good sources of data.
 
-The following case study will show R code that illustrates how the principles of tidy data make it easy to work with, combining manipulation, visualisation and modelling.
-
-In this snippet of code, we first count the number of deaths in each hour of the day ({\tt hod}) for each cause of death ({\tt cod}), then remove missing hours, join on fuller descriptions of the disease codes, and transform to compute hourly proportions within a disease.
+We start by aggregating the full dataset to the minimal data that will allow us to answer our question: the number of deaths per hour per disease:
 
 \begin{verbatim}
+# Counting the the number of deaths in each hour of the day for each 
+# cause of death
 hod2 <- count(deaths, c("hod", "cod"))
+
+# Removing missing missing observations
 hod2 <- subset(hod2, !is.na(hod))
+
+# Combine with data set that gives disease names
 hod2 <- join(hod2, codes)
+
+# Convert from counts to proportions within each disease
 hod2 <- ddply(hod2, "cod", transform, prop = freq / sum(freq))
 \end{verbatim}
 
-In the following code, for each disease we calculate the deviation from a uniform pattern over time, find unusual diseases, and then go back to extract matching records from the original data.
+Next, we compute the overall average death rate for each hour, and merge that back to the original data.
 
 \begin{verbatim}
-uni_dist <- function(x) sqrt(mean((x - 1/23) ^ 2))
+overall <- ddply(hod2, "hod", summarise, freq_all = sum(freq))
+overall <- mutate(overall, prop_all = freq_all / sum(freq_all))
 
+hod2 <- join(overall, hod2, by = "hod")
+\end{verbatim}
+
+\begin{table}
+  \centering
+  \input{case-study/counts-all.tex}
+  \caption{First fifteen rows of the {\tt hod2} data frame.}
+  \label{tbl:counts}
+\end{table}
+
+Next we compute a measure of deviation between each disease and the overall trend: a mean squared deviation. We don't know the variance characteristics of this estimator, so we explore it empirically in Figure~\ref{fig:deviation} by plotting n vs\. deviation. On the log-log scale there is a clear linear trend and inspecting the coefficient of linear model indicates that error is proportional $1 / n^0.9$. We are interested in the outliers who have relatively high values relative to the variability: these are diseases which are different from the average.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.5\linewidth]{case-study/n-dist-raw.pdf}%
+  \includegraphics[width=0.5\linewidth]{case-study/n-dist-log.pdf}
+  \caption{(Left) Plot of n vs deviation. Variability of deviation dominated by the sample size: small samples have large variability. (Right) Log-log plot makes it easy to see pattern of variation as well as unusually high values.  Overlaid with robust linear fit.}
+  \label{fig:deviation}
+\end{figure}
+
+\begin{verbatim}
 devi <- ddply(hod2, "cod", summarise, n = sum(freq), 
-  dist = uni_dist(prop))
-unusual <- subset(devi, n > 1200 & dist >= 0.009)
-hod_unusual <- match_df(hod2, unusual)
+  dist = mean((prop - prop_all)^2))
+devi <- subset(devi, n > 50)
+\end{verbatim}
+
+A plot (not shown) of n vs\. the residuals shows the break around 1.5, so we select those diseases and plot their time courses in two plots. We break the diseases into two groups because of the differences in variability. The results are shown in Figure~\ref{fig:disease}. The causes of death fall in to three main groups: homicide, drowning, transportation and electrical. Murders are more common at night, drowning in the afternoon, traffic during commute times, and drowning in the afternoon. The only disease is sudden infant death syndrome, which has a large peak in early morning.
+
+\begin{figure}[htbp]
+  \centering
+    \includegraphics[width=0.9\textwidth]{case-study/unusual-big}
+    \includegraphics[width=0.9\textwidth]{case-study/unusual-sml}
+  \caption{Causes of death with unusual time courses.  (Top) Causes of death with more than 350 deaths over a year.  (Bottom) Causes of death with less than 350 deaths.}
+  \label{fig:disease}
+\end{figure}
+
+\begin{verbatim}
+devi$resid <- resid(rlm(log(dist) ~ log(n), data = devi))
+unusual <- subset(devi, resid > 1.5)
+hod_unusual_big <- match_df(hod2, subset(unusual, n > 350))
+hod_unusual_sml <- match_df(hod2, subset(unusual, n <= 350))
 \end{verbatim}
 
 \section{Conclusion}
